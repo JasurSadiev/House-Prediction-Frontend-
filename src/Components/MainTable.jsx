@@ -18,6 +18,10 @@ const MyTable = ({
 	currentTimesheetId,
 	accessToken,
 	days,
+	setUpdateTimeSheet,
+	setDeleteRow,
+	deleteRow,
+	monthlyWorkingHours,
 }) => {
 	const [rowCount, setRowCount] = useState(
 		tableData.records ? tableData.records.length : 0
@@ -32,7 +36,8 @@ const MyTable = ({
 	const [loading, setLoading] = useState(false);
 
 	const [tableTotal, setTableTotal] = useState(Array(days + 2).fill(0));
-	const [percentages, setPercentages] = useState([]);
+	const [percentages, setPercentages] = useState(0);
+	const [edit, setEdit] = useState(false);
 	const randomId = uuidv4();
 	const navigate = useNavigate();
 
@@ -43,21 +48,17 @@ const MyTable = ({
 		setisOpen(!isOpen);
 	}
 
-	console.log(percentages);
-
 	function calculatePercentage(rowNumber) {
-		const monthlyWorkingHours = 196;
-
-		// for (let i = 0; i < totalHours.length; i++) {
-		// 	return ((totalHours[i] / monthlyWorkingHours) * 100).toFixed(1);
-		// }
-
-		const calculatedPercentage = (
-			(totalHours[rowNumber] / monthlyWorkingHours) *
-			100
-		).toFixed(1);
-		// setPercentages([...percentages, calculatedPercentage]); // Update state with new percentage
-		return calculatedPercentage;
+		if (monthlyWorkingHours) {
+			const calculatedPercentage = (
+				(totalHours[rowNumber] / monthlyWorkingHours) *
+				100
+			).toFixed(1);
+			// setPercentages([...percentages, calculatedPercentage]); // Update state with new percentage
+			return calculatedPercentage;
+		} else {
+			return 0;
+		}
 	}
 
 	function submitTimesheet() {
@@ -146,9 +147,11 @@ const MyTable = ({
 	};
 
 	useEffect(() => {
-		generateTableData(tableData.records ? tableData.records.length : 0, days);
+		if (tableData) {
+			generateTableData(tableData.records ? tableData.records.length : 0, days);
 
-		setRowCount(tableData.records ? tableData.records.length : 0);
+			setRowCount(tableData.records ? tableData.records.length : 0);
+		}
 	}, [tableData]);
 
 	useEffect(() => {
@@ -178,16 +181,22 @@ const MyTable = ({
 					let hours = tableData.records[j].daily_hours;
 					for (let i = 0; i < hours.length; i++) {
 						if (i === 0) {
+							if (monthlyWorkingHours) {
+								currentTotals[i] =
+									(tableTotalHours * 100) / monthlyWorkingHours;
+							}
 							currentTotals[i + 1] = tableTotalHours;
 						}
 						currentTotals[i + 2] += Number(hours[i].hours);
 					}
 				}
 				setTableTotal(currentTotals);
+			} else if (!tableData.records) {
+				setTableTotal(Array(days + 2).fill(0));
 			}
 		}
 		calculateTotals();
-	}, [tableData, tableTotalHours, totalHours]);
+	}, [tableData, tableTotalHours, totalHours, deleteRow]);
 
 	const generateFirstRowHeaders = () => {
 		const headers = [
@@ -250,6 +259,7 @@ const MyTable = ({
 					/>
 				</td>
 			)),
+			edit && <td></td>,
 		];
 	};
 
@@ -266,14 +276,43 @@ const MyTable = ({
 		</tr>
 	);
 
-	// function generateTableRows(rowCount, colCount){
-	// 	for (let i=0; i<tableData[0].records.length; i++){
-	// 		generateTableData(rowCount, colCount)
-	// 	}
-	// }
+	const handleDeleteRow = async (id, rowIndex) => {
+		try {
+			// Send delete request to /records/{id}
+			const response = await axios.delete(`/records/${id}`);
+			navigate("/my-timesheets");
+			// window.alert("Record deleted successfully", response.data);
+			// Handle any further actions after successful deletion
+		} catch (error) {
+			window.alert("Error deleting record:", error);
+			window.alert(error);
+		} finally {
+			// getTimeSheet();
+			setEdit(false);
+			setDeleteRow(!deleteRow);
+			// removeRecordByIndex(rowIndex);
+		}
+	};
+
+	const removeRecordByIndex = (index) => {
+		setTableData((prevTableData) => {
+			// Make a copy of the records array without the record at the specified index
+			const updatedRecords = [
+				...prevTableData.records.slice(0, index),
+				...prevTableData.records.slice(index + 1),
+			];
+
+			// Return the updated tableData object with the updated records array
+			return {
+				...prevTableData,
+				records: updatedRecords,
+			};
+		});
+	};
 
 	// Function to generate the table data cells
 	const generateTableData = (numRows, numColumns) => {
+		console.log(numRows);
 		const rows = Array.from({ length: numRows }, (_, rowIndex) => (
 			<tr key={rowIndex} className=''>
 				<td className='max-w-[200px] w-[125px]'>
@@ -408,6 +447,16 @@ const MyTable = ({
 						/>
 					</td>
 				))}
+				{edit && (
+					<td
+						className='text-center text-red-600 font-semibold'
+						onClick={() =>
+							handleDeleteRow(tableData.records[rowIndex].record_id, rowIndex)
+						}
+					>
+						x
+					</td>
+				)}
 			</tr>
 		));
 
@@ -427,6 +476,9 @@ const MyTable = ({
 
 	return (
 		<div className=' max-w-screen mt-[50px]'>
+			<span className='block text-right' onClick={() => setEdit(!edit)}>
+				Edit
+			</span>
 			<table className='max-w-screen'>
 				<thead>
 					<tr>{generateFirstRowHeaders()}</tr>

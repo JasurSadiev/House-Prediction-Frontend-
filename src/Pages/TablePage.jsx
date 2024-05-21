@@ -14,10 +14,14 @@ const TablePage = ({ currentTimesheetId }) => {
 	const [days, setDays] = useState(30);
 	const [timeSheet, setTimeSheet] = useState(false);
 	const [updateTimeSheet, setUpdateTimeSheet] = useState(false);
-	const [monthlyWorkingHours, setMonthlyWorkingHours] = useState("");
+	const [monthlyWorkingHours, setMonthlyWorkingHours] = useState([]);
 	const [isOpen, setisOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [order, setOrder] = useState({});
+	const [edit, setEdit] = useState(false);
+
+	const [deleteRow, setDeleteRow] = useState(false);
+
 	const NEW_RECORD_API = "/records";
 
 	const { auth, setAuth } = useAuth();
@@ -56,15 +60,19 @@ const TablePage = ({ currentTimesheetId }) => {
 					navigate("/");
 				}
 				// Handle other errors
+			})
+			.finally(() => {
+				fetchMonthlyWorkingHours();
 			});
 	}
 
 	useEffect(() => {
 		getTimesheet();
-		if (tableData) {
-			fetchMonthlyWorkingHours();
-		}
-	}, []);
+	}, [edit]);
+
+	useEffect(() => {
+		fetchMonthlyWorkingHours();
+	}, [tableData, edit]);
 
 	const NewRecord = async () => {
 		const timesheetId = tableData.timesheet_id;
@@ -120,6 +128,7 @@ const TablePage = ({ currentTimesheetId }) => {
 							(entry) => entry.month === month && entry.year === year
 						)
 					);
+					console.log(response.data);
 				})
 				.catch((error) => {
 					console.error(error);
@@ -127,17 +136,14 @@ const TablePage = ({ currentTimesheetId }) => {
 		}
 	}
 
-	console.log(monthlyWorkingHours);
-
 	return (
 		<div className='flex flex-col max-w-screen'>
 			<Navbar />
 			<Status status={tableData.status} />
 			<span className='text-right mr-4 -mt-4'>
 				Monthly Working Hours:{" "}
-				{monthlyWorkingHours
-					? `${monthlyWorkingHours[0].working_hours} hours`
-					: "Loading..."}
+				{monthlyWorkingHours.length &&
+					`${monthlyWorkingHours[0].working_hours} hours`}
 			</span>
 			<h1 className='text-center mb-10 text-3xl font-bold mt-[20px]'>
 				University of Central Asia
@@ -177,7 +183,7 @@ const TablePage = ({ currentTimesheetId }) => {
 				<MainTable
 					tableData={tableData}
 					setTableData={setTableData}
-					getTimeSheet={setTimeSheet}
+					getTimeSheet={getTimesheet}
 					timeSheet={timeSheet}
 					isOpen={isOpen}
 					setisOpen={setisOpen}
@@ -186,6 +192,14 @@ const TablePage = ({ currentTimesheetId }) => {
 					currentTimesheetId={currentTimesheetId}
 					accessToken={accessToken}
 					days={days}
+					setUpdateTimeSheet={setUpdateTimeSheet}
+					setDeleteRow={setDeleteRow}
+					deleteRow={deleteRow}
+					monthlyWorkingHours={
+						monthlyWorkingHours[0] ? monthlyWorkingHours[0].working_hours : 0
+					}
+					edit={edit}
+					setEdit={setEdit}
 				/>
 			</div>
 		</div>

@@ -62,7 +62,6 @@ const AddRowModal = ({
 
 	useEffect(() => {
 		getGrants();
-		getOrders();
 	}, [isOpen]);
 
 	useEffect(() => {
@@ -110,10 +109,10 @@ const AddRowModal = ({
 		newRecord();
 	};
 
-	if (!orders || orders.length === 0) {
-		// If data is still loading or there is no data, you can render a loading spinner or a message.
-		return <p>Loading...</p>;
-	}
+	// if (!orders || orders.length === 0) {
+	// 	// If data is still loading or there is no data, you can render a loading spinner or a message.
+	// 	return <p>Loading...</p>;
+	// }
 
 	if (loading) {
 		return <Loading />;
